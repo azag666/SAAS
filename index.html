@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HotTrack SAAS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #111827; color: #f3f4f6; }
+        .sidebar { background-color: #1f2937; }
+        .main-content { background-color: #111827; }
+        .card { background-color: #1f2937; border: 1px solid #374151; }
+        .form-input { background-color: #374151; border: 1px solid #4b5563; }
+        .btn { background-color: #3b82f6; color: white; }
+        .btn:hover { background-color: #2563eb; }
+        .nav-link { color: #d1d5db; border-left: 3px solid transparent; }
+        .nav-link:hover { background-color: #374151; border-left-color: #3b82f6; }
+        .nav-link.active { background-color: #1d4ed8; color: white; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        </div>
+
+    <script>
+        const API_BASE_URL = 'https://hottrack.vercel.app'; // CONFIRME SE ESTA É A URL CORRETA DA SUA API
+        const App = {
+            state: {
+                token: null,
+                user: null,
+                data: {},
+                currentPage: 'dashboard'
+            },
+            
+            // Inicializa a aplicação
+            async init() {
+                this.state.token = localStorage.getItem('token');
+                if (this.state.token) {
+                    try {
+                        this.state.data = await this.apiRequest('/api/dashboard/data');
+                        this.render();
+                    } catch (e) {
+                        this.logout();
+                    }
+                } else {
+                    this.render();
+                }
+            },
+            
+            // Função central de requisições
+            async apiRequest(endpoint, method = 'GET', body = null) {
+                // ... (lógica de apiRequest da versão anterior) ...
+            },
+
+            // Função central de renderização
+            render() {
+                const appContainer = document.getElementById('app');
+                if (!this.state.token) {
+                    appContainer.innerHTML = this.templates.login();
+                } else {
+                    appContainer.innerHTML = this.templates.layout();
+                    const contentContainer = document.getElementById('content');
+                    contentContainer.innerHTML = this.templates[this.state.currentPage]();
+                }
+                this.addEventListeners();
+            },
+            
+            // Templates HTML
+            templates: {
+                login() { /* ... (HTML do formulário de login) ... */ },
+                layout() { /* ... (HTML do layout principal com sidebar) ... */ },
+                dashboard() { /* ... (HTML da página de dashboard) ... */ },
+                pixels() { /* ... (HTML da página de pixels) ... */ },
+                // etc. para todas as páginas
+            },
+            
+            // Adiciona os listeners de eventos
+            addEventListeners() {
+                // ... (lógica para adicionar listeners em botões e formulários) ...
+            },
+            
+            // Ações
+            async login(email, password) { /* ... */ },
+            logout() { /* ... */ },
+            // etc.
+        };
+
+        App.init();
+    </script>
+</body>
+</html>
