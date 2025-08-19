@@ -382,6 +382,7 @@
                 if (response.status === 204) return null;
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.message || 'Erro');
+                this.showToast(data.message || 'Operação bem-sucedida!', 'success');
                 return data;
             } catch (error) {
                 this.showToast(error.message, 'error');
