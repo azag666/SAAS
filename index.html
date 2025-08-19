@@ -280,7 +280,9 @@
             const appContainer = document.getElementById('app');
             appContainer.addEventListener('click', async (e) => {
                 if (e.target.id === 'logoutButton') this.logout();
-                if (e.target.id === 'closeModalBtn') document.getElementById('modal-container').innerHTML = '';
+                if (e.target.id === 'closeModalBtn') {
+                    document.getElementById('modal-container').innerHTML = '';
+                }
                 
                 const sidebarLink = e.target.closest('.nav-link');
                 if (sidebarLink) this.navigateTo(sidebarLink.dataset.target);
@@ -311,6 +313,7 @@
                             await this.apiRequest(`/api/${endpoint}/${id}`, 'DELETE');
                             this.state.data[type] = this.state.data[type].filter(item => item.id != id);
                             this.navigateTo(this.state.currentPage);
+                            this.showToast('Item excluído com sucesso!', 'success');
                         } catch(err) {}
                     }
                 }
@@ -326,14 +329,13 @@
 
                 const data = Object.fromEntries(new FormData(form).entries());
                 try {
-                    let success = false;
                     if (form.id === 'pixelForm') {
                         const newPixel = await this.apiRequest('/api/pixels', 'POST', data);
-                        if (newPixel) { this.state.data.pixels.unshift(newPixel); this.navigateTo('pixels'); success = true; }
+                        if (newPixel) { this.state.data.pixels.unshift(newPixel); this.navigateTo('pixels'); }
                     }
                     if (form.id === 'botForm') {
                         const newBot = await this.apiRequest('/api/bots', 'POST', data);
-                        if (newBot) { this.state.data.bots.unshift(newBot); this.navigateTo('bots'); success = true; }
+                        if (newBot) { this.state.data.bots.unshift(newBot); this.navigateTo('bots'); }
                     }
                     if (form.id === 'presselForm') {
                         const pixel_ids = Array.from(form.querySelectorAll('input[name="pixel_ids"]:checked')).map(cb => cb.value);
@@ -346,17 +348,15 @@
                                 this.state.data.pressels.unshift(newPressel);
                                 this.navigateTo('pressels');
                                 this.generatePresselCode(newPressel);
-                                success = true;
                             }
                         }
                     }
                     if (form.id === 'pushinpayForm') {
                         await this.apiRequest('/api/settings/pushinpay', 'POST', { token: data.token });
                         this.state.data.settings.pushinpay_token = data.token;
-                        success = true;
+                        this.showToast('Token salvo com sucesso!', 'success');
                     }
-                    if (success) this.showToast('Salvo com sucesso!', 'success');
-                } catch(e) { }
+                } catch(e) { /* O apiRequest já mostra o alerta de erro */ }
                 finally {
                     button.innerHTML = originalButtonText;
                     button.disabled = false;
@@ -365,12 +365,14 @@
         },
 
         async apiRequest(endpoint, method = 'GET', body = null) {
-            const headers = { 'Content-Type': 'application/json' };
-            if (this.state.token) { headers['Authorization'] = `Bearer ${this.state.token}`; }
-            const options = { method, headers };
-            if (body) { options.body = JSON.stringify(body); }
             try {
+                const headers = { 'Content-Type': 'application/json' };
+                if (this.state.token) { headers['Authorization'] = `Bearer ${this.state.token}`; }
+                const options = { method, headers };
+                if (body) { options.body = JSON.stringify(body); }
+                
                 const response = await fetch(`${this.state.API_BASE_URL}${endpoint}`, options);
+                
                 if (response.status === 204) return null;
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.message || 'Erro');
@@ -463,19 +465,18 @@
         },
 
         showToast(message, type = 'success') {
-            const toastContainer = document.getElementById('modal-container');
             const toast = document.createElement('div');
             toast.textContent = message;
-            const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
-            toast.className = `fixed top-5 right-5 text-white py-2 px-4 rounded-md shadow-lg transform translate-x-full transition-transform duration-300 ${bgColor} animate-fade-in`;
+            const bgColor = type === 'error' ? 'bg-red-500' : 'bg-red-900/80 border border-red-500' : 'bg-green-800/80 border border-green-500';
+            toast.className = `fixed bottom-5 right-5 text-white py-3 px-5 rounded-lg shadow-lg backdrop-blur-sm ${bgColor} animate-fade-in`;
+            
             document.body.appendChild(toast);
+            
             setTimeout(() => {
-                toast.classList.remove('translate-x-full');
-                setTimeout(() => {
-                    toast.classList.add('translate-x-full');
-                    setTimeout(() => toast.remove(), 300);
-                }, 3000);
-            }, 10);
+                toast.style.opacity = 0;
+                toast.style.transform = 'translateY(20px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
     };
 
