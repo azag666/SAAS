@@ -301,14 +301,14 @@
 
                 if (e.target.classList.contains('delete-pixel-btn') || e.target.classList.contains('delete-bot-btn') || e.target.classList.contains('delete-pressel-btn')) {
                     const id = e.target.dataset.id;
-                    let type = '';
-                    if (e.target.classList.contains('delete-pixel-btn')) type = 'pixels';
-                    if (e.target.classList.contains('delete-bot-btn')) type = 'bots';
-                    if (e.target.classList.contains('delete-pressel-btn')) type = 'pressels';
+                    let type = '', endpoint = '';
+                    if (e.target.classList.contains('delete-pixel-btn')) { type = 'pixels'; endpoint = 'pixels'; }
+                    if (e.target.classList.contains('delete-bot-btn')) { type = 'bots'; endpoint = 'bots'; }
+                    if (e.target.classList.contains('delete-pressel-btn')) { type = 'pressels'; endpoint = 'pressels'; }
 
                     if (confirm(`Tem certeza que deseja excluir este item?`)) {
                         try {
-                            await this.apiRequest(`/api/${type}/${id}`, 'DELETE');
+                            await this.apiRequest(`/api/${endpoint}/${id}`, 'DELETE');
                             this.state.data[type] = this.state.data[type].filter(item => item.id != id);
                             this.navigateTo(this.state.currentPage);
                         } catch(err) {}
@@ -329,19 +329,11 @@
                     let success = false;
                     if (form.id === 'pixelForm') {
                         const newPixel = await this.apiRequest('/api/pixels', 'POST', data);
-                        if (newPixel) {
-                            this.state.data.pixels.unshift(newPixel);
-                            this.navigateTo('pixels');
-                            success = true;
-                        }
+                        if (newPixel) { this.state.data.pixels.unshift(newPixel); this.navigateTo('pixels'); success = true; }
                     }
                     if (form.id === 'botForm') {
                         const newBot = await this.apiRequest('/api/bots', 'POST', data);
-                        if (newBot) {
-                            this.state.data.bots.unshift(newBot);
-                            this.navigateTo('bots');
-                            success = true;
-                        }
+                        if (newBot) { this.state.data.bots.unshift(newBot); this.navigateTo('bots'); success = true; }
                     }
                     if (form.id === 'presselForm') {
                         const pixel_ids = Array.from(form.querySelectorAll('input[name="pixel_ids"]:checked')).map(cb => cb.value);
@@ -364,7 +356,7 @@
                         success = true;
                     }
                     if (success) this.showToast('Salvo com sucesso!', 'success');
-                } catch(e) { /* O apiRequest já mostra o erro */ }
+                } catch(e) { }
                 finally {
                     button.innerHTML = originalButtonText;
                     button.disabled = false;
@@ -444,6 +436,7 @@
         const TELEGRAM_USERNAME = '${pressel.bot_name}';
         const WHITE_PAGE_URL = '${pressel.white_page_url}';
         const PIXELS_TO_TRACK = ${pixelsToTrackString};
+        
         const isBot=()=>/bot|facebook|crawler|spider|preview/i.test(navigator.userAgent),isMobile=()=>/android|iphone|ipad|ipod/i.test(navigator.userAgent);
         async function handleRedirect(){if(isBot()||!isMobile()){window.location.replace(WHITE_PAGE_URL);return}
         try{const t=new URLSearchParams(window.location.search),e=await fetch(\`\${API_BASE_URL}/api/registerClick\`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sellerApiKey:SELLER_API_KEY,presselId:PRESSEL_ID,referer:document.referrer||null,fbclid:t.get("fbclid")||null,fbp:document.cookie.match(/_fbp=([^;]+)/)?.[1]||null,fbc:document.cookie.match(/_fbc=([^;]+)/)?.[1]||null,user_agent:navigator.userAgent})}),a=await e.json();e.ok&&"success"===a.status?window.location.replace(\`https://t.me/\${TELEGRAM_USERNAME}?start=\${a.click_id}\`):window.location.replace(WHITE_PAGE_URL)}catch(t){window.location.replace(WHITE_PAGE_URL)}}
