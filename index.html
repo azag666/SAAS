@@ -253,9 +253,11 @@
         },
         
         addDashboardEventListeners() {
-            const appContainer = document.getElementById('app');
-            appContainer.addEventListener('click', async (e) => {
+            // CORREÇÃO: Listener movido para 'document' para capturar cliques no modal
+            document.addEventListener('click', async (e) => {
                 if (e.target.id === 'logoutButton') this.logout();
+                
+                // CORREÇÃO: Agora este IF funcionará
                 if (e.target.id === 'closeModalBtn') {
                     document.getElementById('modal-container').innerHTML = '';
                 }
@@ -295,9 +297,12 @@
                 }
             });
 
-            appContainer.addEventListener('submit', async (e) => {
+            // CORREÇÃO: Listener de submit também movido para 'document' por consistência
+            document.addEventListener('submit', async (e) => {
+                const form = e.target.closest('form');
+                if (!form) return; // Se o evento não se originou de um formulário, ignore.
+                
                 e.preventDefault();
-                const form = e.target;
                 const button = form.querySelector('button[type="submit"]');
                 const originalButtonText = button.innerHTML;
                 button.innerHTML = 'Salvando...';
@@ -403,7 +408,8 @@
             const sellerApiKey = settings.api_key;
             if (!sellerApiKey) return this.showToast("Erro: API Key do vendedor não encontrada.", 'error');
             
-            const selectedPixels = pixels.filter(p => pressel.pixel_ids.some(id => id == p.id));
+            // CORREÇÃO: Previne o crash se 'pressel.pixel_ids' não existir e garante que a lógica funcione
+            const selectedPixels = pixels.filter(p => (pressel.pixel_ids || []).some(id => id == p.id));
             const pixelsToTrackString = JSON.stringify(selectedPixels.map(p => ({ id: p.pixel_id })), null, 2);
             const noscriptPixelsString = selectedPixels.map(p => `<img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=${p.pixel_id}&ev=PageView&noscript=1"/>`).join('\\n    ');
             
