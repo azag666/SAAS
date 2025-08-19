@@ -18,11 +18,11 @@
             background-color: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.2);
             backdrop-filter: blur(12px); transition: all 0.3s ease;
         }
-        .form-input {
+        .form-input, .form-select {
             background-color: rgba(30, 41, 59, 0.5); border: 1px solid #334155; color: #cbd5e1;
             transition: all 0.3s ease;
         }
-        .form-input:focus {
+        .form-input:focus, .form-select:focus {
             outline: none; border-color: #38bdf8;
             box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
         }
@@ -211,25 +211,60 @@
                 </div>`;
             },
             settings() {
-                 return `
+                const { settings } = App.state.data;
+                return `
                 <div class="animate-fade-in">
                     <h1 class="text-3xl font-bold text-white mb-6">Configurações de Pagamento</h1>
-                    <div class="grid grid-cols-1 gap-8 max-w-2xl">
+                    <form id="pixSettingsForm" class="space-y-8 max-w-2xl">
+                        
                         <div class="card p-6 rounded-lg">
-                            <h2 class="text-xl font-semibold mb-4 text-white">Token da PushinPay</h2>
-                            <p class="text-sm text-gray-400 mb-4">Cole aqui o seu token de acesso (Bearer Token) da PushinPay para o seu bot poder gerar cobranças PIX.</p>
-                            <form id="pushinpayForm" class="space-y-4">
-                                <div class="flex items-center gap-2">
-                                    <input name="token" id="pushinpay-token" type="password" value="${App.state.data.settings.pushinpay_token || ''}" placeholder="Cole seu token aqui" class="form-input flex-grow p-2 rounded-md">
-                                    <button type="button" class="toggle-visibility-btn p-2 text-gray-400 hover:text-white" data-target="#pushinpay-token">
-                                        <svg class="pointer-events-none h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                    </button>
-                                    <button type="button" class="copy-btn btn text-sm py-2 px-3" data-target="#pushinpay-token">Copiar</button>
-                                </div>
-                                <button type="submit" class="btn w-full p-2 rounded-md">Salvar Token</button>
-                            </form>
+                            <h2 class="text-xl font-semibold mb-2 text-white">Provedor de PIX Ativo</h2>
+                            <p class="text-sm text-gray-400 mb-4">Selecione qual provedor de pagamento será usado para todas as suas transações.</p>
+                            <select name="active_pix_provider" class="form-select w-full p-2 rounded-md">
+                                <option value="pushinpay" ${settings.active_pix_provider === 'pushinpay' ? 'selected' : ''}>PushinPay</option>
+                                <option value="cnpay" ${settings.active_pix_provider === 'cnpay' ? 'selected' : ''}>CN Pay</option>
+                            </select>
                         </div>
-                    </div>
+
+                        <div class="card p-6 rounded-lg">
+                            <h2 class="text-xl font-semibold mb-4 text-white">Credenciais PushinPay</h2>
+                            <label class="block mb-2 text-sm text-gray-400">Bearer Token</label>
+                            <div class="flex items-center gap-2">
+                                <input name="pushinpay_token" id="pushinpay-token" type="password" value="${settings.pushinpay_token || ''}" class="form-input flex-grow p-2 rounded-md">
+                                <button type="button" class="toggle-visibility-btn p-2 text-gray-400 hover:text-white" data-target="#pushinpay-token">
+                                    <svg class="pointer-events-none h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="card p-6 rounded-lg">
+                            <h2 class="text-xl font-semibold mb-4 text-white">Credenciais CN Pay</h2>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block mb-2 text-sm text-gray-400">Chave Pública (public-key)</label>
+                                    <div class="flex items-center gap-2">
+                                        <input name="cnpay_public_key" id="cnpay-public" type="password" value="${settings.cnpay_public_key || ''}" class="form-input flex-grow p-2 rounded-md">
+                                        <button type="button" class="toggle-visibility-btn p-2 text-gray-400 hover:text-white" data-target="#cnpay-public">
+                                            <svg class="pointer-events-none h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block mb-2 text-sm text-gray-400">Chave Privada (secret-key)</label>
+                                    <div class="flex items-center gap-2">
+                                        <input name="cnpay_secret_key" id="cnpay-secret" type="password" value="${settings.cnpay_secret_key || ''}" class="form-input flex-grow p-2 rounded-md">
+                                        <button type="button" class="toggle-visibility-btn p-2 text-gray-400 hover:text-white" data-target="#cnpay-secret">
+                                            <svg class="pointer-events-none h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <button type="submit" class="btn w-full p-3 font-bold rounded-md">Salvar Configurações</button>
+                        </div>
+                    </form>
                 </div>`;
             },
             documentation() {
@@ -237,7 +272,6 @@
                 <div class="animate-fade-in">
                     <h1 class="text-3xl font-bold text-white mb-6">Documentação e Chave de API</h1>
                     <div class="grid grid-cols-1 gap-8 max-w-2xl">
-
                         <div class="card p-6 rounded-lg">
                             <h2 class="text-xl font-semibold mb-4 text-white">Sua Chave de API HotTrack</h2>
                             <p class="text-sm text-gray-400 mb-4">Use esta chave para autenticar suas requisições na API HotTrack (ex: gerar PIX, consultar status).</p>
@@ -249,7 +283,6 @@
                                 <button class="copy-btn btn text-sm py-2 px-3" data-target="#hottrack-api-key">Copiar</button>
                             </div>
                         </div>
-                        
                         <div class="card p-8 rounded-lg">
                             <h2 class="text-xl font-semibold mb-4 text-white">Documentação Completa</h2>
                             <p class="text-gray-400 mb-4">Acesse nosso guia detalhado com o passo a passo completo para integrar o HotTrack com o ManyChat e outras ferramentas.</p>
@@ -258,21 +291,11 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                             </a>
                         </div>
-
                     </div>
                 </div>`;
             },
             modal(title, content) {
-                return `
-                <div id="modal" class="modal active">
-                    <div class="card p-6 rounded-lg w-full max-w-2xl animate-fade-in">
-                        <div class="flex justify-between items-center mb-4">
-                           <h2 class="text-xl font-bold">${title}</h2>
-                           <button id="closeModalBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
-                        </div>
-                        ${content}
-                    </div>
-                </div>`;
+                return `<div id="modal" class="modal active"><div class="card p-6 rounded-lg w-full max-w-2xl animate-fade-in"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold">${title}</h2><button id="closeModalBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button></div>${content}</div></div>`;
             }
         },
 
@@ -358,15 +381,21 @@
                 const data = Object.fromEntries(new FormData(form).entries());
                 try {
                     let shouldShowSuccess = true;
-                    if (form.id === 'pixelForm') {
+                    if (form.id === 'pixSettingsForm') {
+                        await this.apiRequest('/api/settings/pix', 'POST', data);
+                        App.state.data.settings = { ...App.state.data.settings, ...data };
+                        this.showToast('Configurações salvas com sucesso!', 'success');
+                        shouldShowSuccess = false;
+                    }
+                    else if (form.id === 'pixelForm') {
                         const newPixel = await this.apiRequest('/api/pixels', 'POST', data);
                         if (newPixel) { this.state.data.pixels.unshift(newPixel); this.navigateTo('pixels'); }
                     }
-                    if (form.id === 'botForm') {
+                    else if (form.id === 'botForm') {
                         const newBot = await this.apiRequest('/api/bots', 'POST', data);
                         if (newBot) { this.state.data.bots.unshift(newBot); this.navigateTo('bots'); }
                     }
-                    if (form.id === 'presselForm') {
+                    else if (form.id === 'presselForm') {
                         const pixel_ids = Array.from(form.querySelectorAll('input[name="pixel_ids"]:checked')).map(cb => cb.value);
                         if (pixel_ids.length === 0) {
                              this.showToast('Selecione ao menos um pixel.', 'error');
@@ -380,13 +409,6 @@
                                 this.generatePresselCode(newPressel);
                             }
                         }
-                    }
-                    if (form.id === 'pushinpayForm') {
-                        await this.apiRequest('/api/settings/pushinpay', 'POST', { token: data.token });
-                        this.state.data.settings.pushinpay_token = data.token;
-                        this.navigateTo('settings');
-                        this.showToast('Token salvo com sucesso!', 'success');
-                        shouldShowSuccess = false;
                     }
                     if (shouldShowSuccess) this.showToast('Salvo com sucesso!', 'success');
                 } catch(e) { /* O apiRequest já mostra a notificação de erro */ }
