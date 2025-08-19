@@ -213,21 +213,8 @@
             settings() {
                  return `
                 <div class="animate-fade-in">
-                    <h1 class="text-3xl font-bold text-white mb-6">Configurações e Chaves de API</h1>
+                    <h1 class="text-3xl font-bold text-white mb-6">Configurações de Pagamento</h1>
                     <div class="grid grid-cols-1 gap-8 max-w-2xl">
-                        
-                        <div class="card p-6 rounded-lg">
-                            <h2 class="text-xl font-semibold mb-4 text-white">Sua Chave de API HotTrack</h2>
-                            <p class="text-sm text-gray-400 mb-4">Use esta chave para autenticar suas requisições na API HotTrack (ex: gerar PIX, consultar status).</p>
-                            <div class="flex items-center gap-2">
-                                <input id="hottrack-api-key" type="password" readonly value="${App.state.data.settings.api_key || ''}" class="form-input flex-grow p-2 rounded-md">
-                                <button class="toggle-visibility-btn p-2 text-gray-400 hover:text-white" data-target="#hottrack-api-key">
-                                    <svg class="pointer-events-none h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                </button>
-                                <button class="copy-btn btn text-sm py-2 px-3" data-target="#hottrack-api-key">Copiar</button>
-                            </div>
-                        </div>
-
                         <div class="card p-6 rounded-lg">
                             <h2 class="text-xl font-semibold mb-4 text-white">Token da PushinPay</h2>
                             <p class="text-sm text-gray-400 mb-4">Cole aqui o seu token de acesso (Bearer Token) da PushinPay para o seu bot poder gerar cobranças PIX.</p>
@@ -248,9 +235,25 @@
             documentation() {
                 return `
                 <div class="animate-fade-in">
-                    <h1 class="text-3xl font-bold text-white mb-6">Documentação da API</h1>
-                    <div class="card p-8 rounded-lg">
-                        <p class="text-gray-400">Em breve, uma documentação completa sobre como integrar e utilizar a API HotTrack estará disponível aqui.</p>
+                    <h1 class="text-3xl font-bold text-white mb-6">Documentação e Chave de API</h1>
+                    <div class="grid grid-cols-1 gap-8 max-w-2xl">
+
+                        <div class="card p-6 rounded-lg">
+                            <h2 class="text-xl font-semibold mb-4 text-white">Sua Chave de API HotTrack</h2>
+                            <p class="text-sm text-gray-400 mb-4">Use esta chave para autenticar suas requisições na API HotTrack (ex: gerar PIX, consultar status).</p>
+                            <div class="flex items-center gap-2">
+                                <input id="hottrack-api-key" type="password" readonly value="${App.state.data.settings.api_key || ''}" class="form-input flex-grow p-2 rounded-md">
+                                <button class="toggle-visibility-btn p-2 text-gray-400 hover:text-white" data-target="#hottrack-api-key">
+                                    <svg class="pointer-events-none h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                </button>
+                                <button class="copy-btn btn text-sm py-2 px-3" data-target="#hottrack-api-key">Copiar</button>
+                            </div>
+                        </div>
+                        
+                        <div class="card p-8 rounded-lg">
+                             <h2 class="text-xl font-semibold mb-4 text-white">Primeiros Passos</h2>
+                            <p class="text-gray-400">Em breve, uma documentação completa sobre como integrar e utilizar a API HotTrack estará disponível aqui.</p>
+                        </div>
                     </div>
                 </div>`;
             },
@@ -510,6 +513,17 @@
     };
 
     App.init();
+
+    // Desabilitar clique direito e atalhos de dev tools
+    document.addEventListener('contextmenu', event => event.preventDefault());
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'F12' || 
+           (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || 
+           (e.ctrlKey && e.key === 'U') ||
+           (e.metaKey && e.altKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))) {
+            e.preventDefault();
+        }
+    });
     </script>
 </body>
 </html>
