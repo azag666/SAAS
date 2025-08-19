@@ -180,7 +180,7 @@
                 </div>`;
             },
             bots() {
-                const botListHTML = App.state.data.bots.map(b => `<div class="p-2 bg-slate-900/50 rounded flex justify-between items-center"><span class="text-sm">${b.bot_name}</span><button data-id="${b.id}" class="delete-bot-btn btn btn-red text-xs py-1 px-2">Excluir</button></div>`).join('');
+                 const botListHTML = App.state.data.bots.map(b => `<div class="p-2 bg-slate-900/50 rounded flex justify-between items-center"><span class="text-sm">${b.bot_name}</span><button data-id="${b.id}" class="delete-bot-btn btn btn-red text-xs py-1 px-2">Excluir</button></div>`).join('');
                 return `
                 <div class="animate-fade-in">
                     <h1 class="text-3xl font-bold text-white mb-6">Gerenciar Bots</h1>
@@ -253,7 +253,7 @@
                     <div class="card p-6 rounded-lg w-full max-w-2xl animate-fade-in">
                         <div class="flex justify-between items-center mb-4">
                            <h2 class="text-xl font-bold">${title}</h2>
-                           <button id="closeModalBtn" class="text-gray-400 hover:text-white">&times;</button>
+                           <button id="closeModalBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
                         </div>
                         ${content}
                     </div>
@@ -319,14 +319,20 @@
             appContainer.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const form = e.target;
-                const data = Object.fromEntries(new FormData(form).entries());
+                const button = form.querySelector('button[type="submit"]');
+                const originalButtonText = button.innerHTML;
+                button.innerHTML = 'Salvando...';
+                button.disabled = true;
 
+                const data = Object.fromEntries(new FormData(form).entries());
                 try {
+                    let success = false;
                     if (form.id === 'pixelForm') {
                         const newPixel = await this.apiRequest('/api/pixels', 'POST', data);
                         if (newPixel) {
                             this.state.data.pixels.unshift(newPixel);
                             this.navigateTo('pixels');
+                            success = true;
                         }
                     }
                     if (form.id === 'botForm') {
@@ -334,25 +340,35 @@
                         if (newBot) {
                             this.state.data.bots.unshift(newBot);
                             this.navigateTo('bots');
+                            success = true;
                         }
                     }
                     if (form.id === 'presselForm') {
                         const pixel_ids = Array.from(form.querySelectorAll('input[name="pixel_ids"]:checked')).map(cb => cb.value);
-                        if (pixel_ids.length === 0) return alert('Selecione ao menos um pixel.');
-                        const payload = { ...data, pixel_ids };
-                        const newPressel = await this.apiRequest('/api/pressels', 'POST', payload);
-                        if (newPressel) {
-                            this.state.data.pressels.unshift(newPressel);
-                            this.navigateTo('pressels');
-                            this.generatePresselCode(newPressel);
+                        if (pixel_ids.length === 0) {
+                             this.showToast('Selecione ao menos um pixel.', 'error');
+                        } else {
+                            const payload = { ...data, pixel_ids };
+                            const newPressel = await this.apiRequest('/api/pressels', 'POST', payload);
+                            if (newPressel) {
+                                this.state.data.pressels.unshift(newPressel);
+                                this.navigateTo('pressels');
+                                this.generatePresselCode(newPressel);
+                                success = true;
+                            }
                         }
                     }
                     if (form.id === 'pushinpayForm') {
                         await this.apiRequest('/api/settings/pushinpay', 'POST', { token: data.token });
-                        alert('Token salvo com sucesso!');
                         this.state.data.settings.pushinpay_token = data.token;
+                        success = true;
                     }
-                } catch(e) {}
+                    if (success) this.showToast('Salvo com sucesso!', 'success');
+                } catch(e) { /* O apiRequest já mostra o erro */ }
+                finally {
+                    button.innerHTML = originalButtonText;
+                    button.disabled = false;
+                }
             });
         },
 
@@ -368,7 +384,7 @@
                 if (!response.ok) throw new Error(data.message || 'Erro');
                 return data;
             } catch (error) {
-                alert(`Erro: ${error.message}`);
+                this.showToast(error.message, 'error');
                 if (error.message.includes('inválido') || error.message.includes('Token')) this.logout();
                 throw error;
             }
@@ -386,7 +402,7 @@
         async register(name, email, password) {
             try {
                 await this.apiRequest('/api/sellers/register', 'POST', { name, email, password });
-                alert('Cadastro realizado! Faça o login.');
+                this.showToast('Cadastro realizado! Faça o login.', 'success');
                 this.renderLogin('login');
             } catch (e) {}
         },
@@ -411,7 +427,7 @@
         generatePresselCode(pressel) {
             const { settings, pixels } = this.state.data;
             const sellerApiKey = settings.api_key;
-            if (!sellerApiKey) return alert("Erro: API Key do vendedor não encontrada.");
+            if (!sellerApiKey) return this.showToast("Erro: API Key do vendedor não encontrada.", 'error');
             
             const selectedPixels = pixels.filter(p => pressel.pixel_ids.includes(p.id));
             const pixelsToTrackString = JSON.stringify(selectedPixels.map(p => ({ id: p.pixel_id })), null, 2);
@@ -420,9 +436,7 @@
             const code = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${pressel.name}</title>
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>${pressel.name}</title>
     <script>
         const API_BASE_URL = '${this.state.API_BASE_URL}';
         const SELLER_API_KEY = '${sellerApiKey}';
@@ -430,33 +444,9 @@
         const TELEGRAM_USERNAME = '${pressel.bot_name}';
         const WHITE_PAGE_URL = '${pressel.white_page_url}';
         const PIXELS_TO_TRACK = ${pixelsToTrackString};
-        
-        const isBot = () => /bot|facebook|crawler|spider|preview/i.test(navigator.userAgent);
-        const isMobile = () => /android|iphone|ipad|ipod/i.test(navigator.userAgent);
-        
-        async function handleRedirect() {
-            if (isBot() || !isMobile()) { window.location.replace(WHITE_PAGE_URL); return; }
-            try {
-                const urlParams = new URLSearchParams(window.location.search);
-                const response = await fetch(\`\${API_BASE_URL}/api/registerClick\`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        sellerApiKey: SELLER_API_KEY,
-                        presselId: PRESSEL_ID,
-                        referer: document.referrer || null,
-                        fbclid: urlParams.get('fbclid') || null,
-                        fbp: document.cookie.match(/_fbp=([^;]+)/)?.[1] || null,
-                        fbc: document.cookie.match(/_fbc=([^;]+)/)?.[1] || null,
-                        user_agent: navigator.userAgent
-                    })
-                });
-                const data = await response.json();
-                if (response.ok && data.status === 'success') {
-                    window.location.replace(\`https://t.me/\${TELEGRAM_USERNAME}?start=\${data.click_id}\`);
-                } else { window.location.replace(WHITE_PAGE_URL); }
-            } catch (error) { window.location.replace(WHITE_PAGE_URL); }
-        }
+        const isBot=()=>/bot|facebook|crawler|spider|preview/i.test(navigator.userAgent),isMobile=()=>/android|iphone|ipad|ipod/i.test(navigator.userAgent);
+        async function handleRedirect(){if(isBot()||!isMobile()){window.location.replace(WHITE_PAGE_URL);return}
+        try{const t=new URLSearchParams(window.location.search),e=await fetch(\`\${API_BASE_URL}/api/registerClick\`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sellerApiKey:SELLER_API_KEY,presselId:PRESSEL_ID,referer:document.referrer||null,fbclid:t.get("fbclid")||null,fbp:document.cookie.match(/_fbp=([^;]+)/)?.[1]||null,fbc:document.cookie.match(/_fbc=([^;]+)/)?.[1]||null,user_agent:navigator.userAgent})}),a=await e.json();e.ok&&"success"===a.status?window.location.replace(\`https://t.me/\${TELEGRAM_USERNAME}?start=\${a.click_id}\`):window.location.replace(WHITE_PAGE_URL)}catch(t){window.location.replace(WHITE_PAGE_URL)}}
         handleRedirect();
     <\/script>
     <script>
@@ -472,11 +462,26 @@
             const modalContainer = document.getElementById('modal-container');
             const encodedCode = code.trim().replace(/</g, "&lt;").replace(/>/g, "&gt;");
             const modalContent = `
-                <textarea id="presselCode" readonly class="form-input w-full h-64 text-xs bg-gray-900">${encodedCode}</textarea>
+                <textarea id="presselCode" readonly class="form-input w-full h-64 text-xs bg-slate-900/50">${encodedCode}</textarea>
                 <div class="mt-4 flex justify-end">
                     <button id="copyCodeBtn" class="btn">Copiar Código</button>
                 </div>`;
             modalContainer.innerHTML = this.templates.modal('Código da Pressel Gerado', modalContent);
+        },
+
+        showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
+            toast.className = `fixed top-5 right-5 text-white py-2 px-4 rounded-md shadow-lg transform translate-x-full transition-transform duration-300 ${bgColor}`;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+                setTimeout(() => {
+                    toast.classList.add('translate-x-full');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }, 10);
         }
     };
 
