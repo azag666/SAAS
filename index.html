@@ -38,6 +38,8 @@
         .btn:disabled { background-color: #334155; cursor: not-allowed; transform: none; box-shadow: none; }
         .btn-red { background-color: #7f1d1d; border-color: #b91c1c; box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
         .btn-red:hover { background-color: #991b1b; box-shadow: 0 0 20px rgba(239, 68, 68, 0.6); }
+        .btn-green { background-color: #047857; border-color: #059669; box-shadow: 0 0 10px rgba(16, 185, 129, 0.3); }
+        .btn-green:hover { background-color: #059669; box-shadow: 0 0 20px rgba(16, 185, 129, 0.6); }
         .nav-link { color: #94a3b8; border-left: 3px solid transparent; cursor: pointer; transition: all 0.3s ease; }
         .nav-link:hover { background-color: rgba(56, 189, 248, 0.05); border-left-color: #38bdf8; color: #e2e8f0; }
         .nav-link.active { background-color: rgba(14, 165, 233, 0.1); border-left-color: #0ea5e9; color: white; font-weight: 600; }
@@ -62,13 +64,16 @@
     <script>
     const App = {
         state: {
-            API_BASE_URL: 'https://hottrack.vercel.app',
+            API_BASE_URL: '', // Detect automatically
             token: null,
             data: { pixels: [], bots: [], pressels: [], settings: {} },
             currentPage: 'pressels'
         },
 
         async init() {
+            // V2.0 - Detect API URL automatically
+            this.state.API_BASE_URL = window.location.origin.includes('localhost') ? 'http://localhost:3000' : window.location.origin;
+
             this.state.token = localStorage.getItem('hottrack_token');
             const appContainer = document.getElementById('app');
             appContainer.innerHTML = `<div class="flex h-screen items-center justify-center"><p>Carregando...</p></div>`;
@@ -164,8 +169,16 @@
                     </div>
                 </div>`;
             },
+            // V2.0 START: TEMPLATE DA PÁGINA DE BOTS ATUALIZADO
             bots() {
-                 const botListHTML = App.state.data.bots.map(b => `<div class="p-2 bg-slate-900/50 rounded flex justify-between items-center"><span class="text-sm">${b.bot_name}</span><button data-id="${b.id}" class="delete-bot-btn btn btn-red text-xs py-1 px-2">Excluir</button></div>`).join('');
+                 const botListHTML = App.state.data.bots.map(b => `
+                    <div class="p-3 bg-slate-900/50 rounded flex justify-between items-center">
+                        <span class="text-sm font-medium">${b.bot_name}</span>
+                        <div class="space-x-2">
+                           <button data-id="${b.id}" class="manage-flow-btn btn text-xs py-1 px-2">Gerenciar Fluxo</button>
+                           <button data-id="${b.id}" class="delete-bot-btn btn btn-red text-xs py-1 px-2">Excluir</button>
+                        </div>
+                    </div>`).join('');
                 return `
                 <div class="animate-fade-in">
                     <h1 class="text-3xl font-bold text-white mb-6">Gerenciar Bots</h1>
@@ -185,6 +198,8 @@
                     </div>
                 </div>`;
             },
+            // V2.0 END
+
             pressels() {
                 const { pixels, bots, pressels } = App.state.data;
                 const botOptions = bots.map(b => `<option value="${b.id}">${b.bot_name}</option>`).join('');
@@ -307,7 +322,39 @@
             },
             modal(title, content) {
                 return `<div id="modal" class="modal active"><div class="card p-6 rounded-lg w-full max-w-2xl animate-fade-in"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold">${title}</h2><button id="closeModalBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button></div>${content}</div></div>`;
+            },
+            // V2.0 START: TEMPLATE DO NOVO MODAL DE GERENCIAMENTO DE FLUXO
+            botFlowModal(bot) {
+                const modalContent = `
+                    <p class="text-sm text-gray-400 mb-6">Configure a mensagem que o bot <strong>@${bot.bot_name}</strong> enviará ao receber o comando /start.</p>
+                    <form id="botFlowForm" data-bot-id="${bot.id}" class="space-y-4">
+                        <div>
+                            <label class="text-sm font-medium text-gray-400 block mb-1">URL da Imagem</label>
+                            <input name="flow_image_url" placeholder="https://exemplo.com/imagem.png" class="form-input w-full p-2 rounded-md" required>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-gray-400 block mb-1">Texto da Mensagem</label>
+                            <textarea name="flow_text" placeholder="Digite o texto que aparecerá junto com a imagem." class="form-input w-full p-2 rounded-md" rows="4" required></textarea>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-sm font-medium text-gray-400 block mb-1">Texto Botão PIX</label>
+                                <input name="flow_button_pix_text" value="✅ Gerar PIX" class="form-input w-full p-2 rounded-md" required>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-400 block mb-1">Texto Botão Consultar</label>
+                                <input name="flow_button_check_text" value="🔎 Consultar PIX" class="form-input w-full p-2 rounded-md" required>
+                            </div>
+                        </div>
+                        <div class="flex justify-end gap-4 pt-4">
+                            <button type="button" id="setWebhookBtn" data-bot-id="${bot.id}" class="btn btn-green">Ativar/Atualizar Bot</button>
+                            <button type="submit" class="btn">Salvar Fluxo</button>
+                        </div>
+                    </form>
+                `;
+                return this.modal(`Gerenciar Fluxo de @${bot.bot_name}`, modalContent);
             }
+            // V2.0 END
         },
 
         addAuthEventListeners() {
@@ -360,6 +407,22 @@
                     const pressel = this.state.data.pressels.find(p => p.id == presselId);
                     if (pressel) this.generatePresselCode(pressel);
                 }
+
+                // V2.0 START: EVENT LISTENERS PARA OS NOVOS BOTÕES
+                if (e.target.classList.contains('manage-flow-btn')) {
+                    const botId = e.target.dataset.id;
+                    const bot = this.state.data.bots.find(b => b.id == botId);
+                    if (bot) this.openBotFlowModal(bot);
+                }
+
+                if (e.target.id === 'setWebhookBtn') {
+                    const botId = e.target.dataset.botId;
+                    try {
+                        const result = await this.apiRequest(`/api/bots/${botId}/set-webhook`, 'POST');
+                        this.showToast(result.message, 'success');
+                    } catch(err) {}
+                }
+                // V2.0 END
 
                 if (e.target.classList.contains('delete-pixel-btn') || e.target.classList.contains('delete-bot-btn') || e.target.classList.contains('delete-pressel-btn')) {
                     const id = e.target.dataset.id;
@@ -421,6 +484,15 @@
                             }
                         }
                     }
+                    // V2.0 START: EVENT LISTENER PARA O FORMULÁRIO DE FLUXO DO BOT
+                    else if (form.id === 'botFlowForm') {
+                        const botId = form.dataset.botId;
+                        await this.apiRequest(`/api/bots/${botId}/flow`, 'POST', data);
+                        this.showToast('Fluxo salvo com sucesso!', 'success');
+                        shouldShowSuccess = false; // A notificação já foi exibida
+                    }
+                    // V2.0 END
+
                     if (shouldShowSuccess) this.showToast('Salvo com sucesso!', 'success');
                 } catch(e) { /* O apiRequest já mostra a notificação de erro */ }
                 finally {
@@ -543,7 +615,29 @@
                 toast.style.transform = 'translateY(20px)';
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
+        },
+
+        // V2.0 START: NOVAS FUNÇÕES PARA O MODAL DO BOT
+        async openBotFlowModal(bot) {
+            const modalContainer = document.getElementById('modal-container');
+            modalContainer.innerHTML = this.templates.botFlowModal(bot);
+            
+            try {
+                const flowData = await this.apiRequest(`/api/bots/${bot.id}/flow`);
+                const form = document.getElementById('botFlowForm');
+                if(form && flowData) {
+                    form.elements.flow_image_url.value = flowData.flow_image_url || '';
+                    form.elements.flow_text.value = flowData.flow_text || '';
+                    form.elements.flow_button_pix_text.value = flowData.flow_button_pix_text || '✅ Gerar PIX';
+                    form.elements.flow_button_check_text.value = flowData.flow_button_check_text || '🔎 Consultar PIX';
+                }
+            } catch (err) {
+                 // Erro já tratado pelo apiRequest, mas podemos fechar o modal se desejado
+                 this.showToast('Não foi possível carregar os dados do fluxo.', 'error');
+                 modalContainer.innerHTML = '';
+            }
         }
+        // V2.0 END
     };
 
     App.init();
