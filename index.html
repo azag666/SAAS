@@ -337,11 +337,11 @@
                 try {
                     if (form.id === 'pixelForm') {
                         const newPixel = await this.apiRequest('/api/pixels', 'POST', data);
-                        if (newPixel) { this.state.data.pixels.unshift(newPixel); this.navigateTo('pixels'); }
+                        if (newPixel) { this.state.data.pixels.unshift(newPixel); this.navigateTo('pixels'); this.showToast('Pixel salvo com sucesso!', 'success');}
                     }
                     if (form.id === 'botForm') {
                         const newBot = await this.apiRequest('/api/bots', 'POST', data);
-                        if (newBot) { this.state.data.bots.unshift(newBot); this.navigateTo('bots'); }
+                        if (newBot) { this.state.data.bots.unshift(newBot); this.navigateTo('bots'); this.showToast('Bot salvo com sucesso!', 'success');}
                     }
                     if (form.id === 'presselForm') {
                         const pixel_ids = Array.from(form.querySelectorAll('input[name="pixel_ids"]:checked')).map(cb => cb.value);
@@ -379,10 +379,9 @@
                 
                 const response = await fetch(`${this.state.API_BASE_URL}${endpoint}`, options);
                 
-                if (response.status === 204) return null;
+                if (response.status === 204) return null; // No content, successful delete
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.message || 'Erro');
-                this.showToast(data.message || 'Operação bem-sucedida!', 'success');
                 return data;
             } catch (error) {
                 this.showToast(error.message, 'error');
@@ -402,8 +401,8 @@
         
         async register(name, email, password) {
             try {
-                await this.apiRequest('/api/sellers/register', 'POST', { name, email, password });
-                this.showToast('Cadastro realizado! Faça o login.', 'success');
+                const data = await this.apiRequest('/api/sellers/register', 'POST', { name, email, password });
+                this.showToast(data.message || 'Cadastro realizado! Faça o login.', 'success');
                 this.renderLogin('login');
             } catch (e) {}
         },
@@ -475,12 +474,13 @@
             const toast = document.createElement('div');
             toast.textContent = message;
             const bgColor = type === 'error' ? 'bg-red-600' : 'bg-green-600';
-            toast.className = `fixed bottom-5 right-5 text-white py-3 px-5 rounded-lg shadow-lg ${bgColor} animate-fade-in`;
+            toast.className = `fixed bottom-5 right-5 text-white py-3 px-5 rounded-lg shadow-lg ${bgColor} animate-fade-in z-50`;
             
             document.body.appendChild(toast);
             
             setTimeout(() => {
                 toast.style.opacity = 0;
+                toast.style.transition = 'opacity 0.3s, transform 0.3s';
                 toast.style.transform = 'translateY(20px)';
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
