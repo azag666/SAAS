@@ -463,11 +463,14 @@
         },
 
         showToast(message, type = 'success') {
+            const toastContainer = document.getElementById('modal-container'); // Reutilizando o modal container para o toast
             const toast = document.createElement('div');
             toast.textContent = message;
             const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
-            toast.className = `fixed top-5 right-5 text-white py-2 px-4 rounded-md shadow-lg transform translate-x-full transition-transform duration-300 ${bgColor}`;
-            document.body.appendChild(toast);
+            toast.className = `fixed top-5 right-5 text-white py-2 px-4 rounded-md shadow-lg transform translate-x-full transition-transform duration-300 ${bgColor} animate-fade-in`;
+            
+            document.body.appendChild(toast); // Adiciona ao body para ficar por cima de tudo
+            
             setTimeout(() => {
                 toast.classList.remove('translate-x-full');
                 setTimeout(() => {
