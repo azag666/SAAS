@@ -65,7 +65,9 @@
             API_BASE_URL: 'https://hottrack.vercel.app',
             token: null,
             data: { pixels: [], bots: [], pressels: [], settings: {} },
-            currentPage: 'pressels'
+            analyticsData: null,
+            filteredLeadId: null,
+            currentPage: 'dashboard'
         },
 
         async init() {
@@ -74,7 +76,12 @@
             appContainer.innerHTML = `<div class="flex h-screen items-center justify-center"><p>Carregando...</p></div>`;
             if (this.state.token) {
                 try {
-                    this.state.data = await this.apiRequest('/api/dashboard/data');
+                    const [mainData, analyticsData] = await Promise.all([
+                        this.apiRequest('/api/dashboard/data'),
+                        this.apiRequest('/api/dashboard/analytics')
+                    ]);
+                    this.state.data = mainData;
+                    this.state.analyticsData = analyticsData;
                     this.renderLayout();
                 } catch (e) { this.logout(); }
             } else {
@@ -131,6 +138,7 @@
                             <h1 class="text-2xl font-bold text-white">HotTrack</h1>
                         </div>
                         <nav id="sidebarNav" class="flex flex-col space-y-2">
+                            <div data-target="dashboard" class="nav-link p-3 rounded-lg flex items-center gap-3"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 100 12h-3a7.5 7.5 0 000-12h3z" /><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" /></svg>Análise</div>
                             <div data-target="pressels" class="nav-link p-3 rounded-lg flex items-center gap-3"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>Criador de Pressel</div>
                             <div data-target="pixels" class="nav-link p-3 rounded-lg flex items-center gap-3"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 12l4.179 2.25M6.429 9.75l5.571 3 5.571-3m0 0l4.179-2.25L12 5.25 7.821 7.5" /></svg>Gerenciar Pixels</div>
                             <div data-target="bots" class="nav-link p-3 rounded-lg flex items-center gap-3"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Gerenciar Bots</div>
@@ -226,22 +234,18 @@
                 <div class="animate-fade-in">
                     <h1 class="text-3xl font-bold text-white mb-6">API PIX</h1>
                     <form id="pixSettingsForm" class="space-y-8 max-w-3xl">
-                        
                         <div class="card p-6 rounded-lg">
                             <h2 class="text-xl font-semibold mb-2 text-white">Provedor de PIX Ativo</h2>
                             <p class="text-sm text-gray-400 mb-4">Selecione o provedor de pagamento que será usado para todas as suas transações.</p>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 provider-selector">
-                                
                                 <input type="radio" id="provider_pushinpay" name="active_pix_provider" value="pushinpay" class="hidden" ${isChecked('pushinpay')}>
                                 <label for="provider_pushinpay" class="card p-4 text-center cursor-pointer border-2 border-slate-700 hover:border-sky-500 transition-all duration-200">
                                     <h3 class="text-lg font-bold text-white">PushinPay</h3>
                                 </label>
-
                                 <input type="radio" id="provider_cnpay" name="active_pix_provider" value="cnpay" class="hidden" ${isChecked('cnpay')}>
                                 <label for="provider_cnpay" class="card p-4 text-center cursor-pointer border-2 border-slate-700 hover:border-sky-500 transition-all duration-200">
                                     <h3 class="text-lg font-bold text-white">CN Pay</h3>
                                 </label>
-
                                 <input type="radio" id="provider_oasyfy" name="active_pix_provider" value="oasyfy" class="hidden" ${isChecked('oasyfy')}>
                                 <label for="provider_oasyfy" class="card p-4 text-center cursor-pointer border-2 border-slate-700 hover:border-sky-500 transition-all duration-200">
                                     <h3 class="text-lg font-bold text-white">Oasy.fy</h3>
@@ -311,6 +315,51 @@
             },
             modal(title, content) {
                 return `<div id="modal" class="modal active"><div class="card p-6 rounded-lg w-full max-w-2xl animate-fade-in"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold">${title}</h2><button id="closeModalBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button></div>${content}</div></div>`;
+            },
+            dashboard() {
+                if (!this.state.analyticsData) {
+                    return `<div class="flex h-full items-center justify-center"><p>Carregando dados analíticos...</p></div>`;
+                }
+                const { kpis, topStates, providerPerformance } = this.state.analyticsData;
+                const kpiCard = (title, value) => `<div class="card p-4 rounded-lg"><p class="text-sm text-gray-400">${title}</p><p class="text-2xl font-bold text-white">${value}</p></div>`;
+                
+                return `
+                <div class="animate-fade-in">
+                    <h1 class="text-3xl font-bold text-white mb-6">Análise da Operação</h1>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                        ${kpiCard('Clicks nas Pressels', kpis.totalClicks)}
+                        ${kpiCard('PIX Pagos', kpis.pixPaid)}
+                        ${kpiCard('Faturamento Total', new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(kpis.totalRevenue))}
+                        ${kpiCard('Taxa de Conversão', `${kpis.conversionRate.toFixed(2)}%`)}
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="card p-6 rounded-lg">
+                            <h2 class="text-xl font-bold text-white mb-4">Top 10 Estados com Maior Tráfego</h2>
+                            ${topStates.length > 0 ? `
+                            <ul class="space-y-3">
+                                ${topStates.map(s => `<li class="flex justify-between items-center text-sm"><span class="text-gray-300">${s.state}</span><span class="font-semibold text-white bg-slate-700/50 px-2 py-1 rounded">${s.click_count} cliques</span></li>`).join('')}
+                            </ul>` : '<p class="text-gray-500">Ainda não há dados de cliques para exibir.</p>'}
+                        </div>
+                        <div class="card p-6 rounded-lg">
+                            <h2 class="text-xl font-bold text-white mb-4">Desempenho por Provedor de PIX</h2>
+                            ${providerPerformance.length > 0 ? `
+                            <ul class="space-y-4">
+                                ${providerPerformance.map(p => `
+                                <li class="text-sm">
+                                    <h3 class="font-bold text-base text-sky-400 capitalize">${p.provider}</h3>
+                                    <div class="flex justify-between items-center mt-1">
+                                        <span class="text-gray-400">Vendas:</span>
+                                        <span class="font-semibold text-white">${p.salesCount}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-400">Taxa de Conversão (Pagos / Gerados):</span>
+                                        <span class="font-semibold text-white">${p.conversionRate.toFixed(2)}%</span>
+                                    </div>
+                                </li>`).join('')}
+                            </ul>` : '<p class="text-gray-500">Ainda não há dados de pagamentos para exibir.</p>'}
+                        </div>
+                    </div>
+                </div>`;
             }
         },
 
