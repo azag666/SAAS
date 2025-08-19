@@ -18,6 +18,8 @@
         .nav-link.active { background-color: rgba(59, 130, 246, 0.2); border-left-color: #3b82f6; color: white; font-weight: 600; }
         .modal { display: none; }
         .modal.active { display: flex; align-items: center; justify-content: center; position: fixed; z-index: 50; inset: 0; background-color: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -30,21 +32,18 @@
             API_BASE_URL: 'https://hottrack.vercel.app',
             token: null,
             data: { pixels: [], bots: [], pressels: [], settings: {} },
-            currentPage: 'pressels' // Inicia na página principal
+            currentPage: 'pressels'
         },
 
         async init() {
             this.state.token = localStorage.getItem('hottrack_token');
             const appContainer = document.getElementById('app');
             appContainer.innerHTML = `<p class="text-center p-8">Carregando...</p>`;
-            
             if (this.state.token) {
                 try {
                     this.state.data = await this.apiRequest('/api/dashboard/data');
                     this.renderLayout();
-                } catch (e) {
-                    this.logout();
-                }
+                } catch (e) { this.logout(); }
             } else {
                 this.renderLogin();
             }
@@ -62,9 +61,34 @@
         },
         
         templates: {
-            auth(page = 'login') { return `...`; }, // Simplificado para brevidade
-            loginForm() { return `...`; },
-            registerForm() { return `...`; },
+            auth(page = 'login') {
+                return `<div class="flex items-center justify-center min-h-screen p-4"><div id="auth-forms-container" class="w-full max-w-md">${page === 'login' ? this.loginForm() : this.registerForm()}</div></div>`;
+            },
+            loginForm() {
+                return `
+                <div class="card p-8 rounded-2xl shadow-2xl animate-fade-in">
+                    <h1 class="text-3xl font-bold text-center text-white">Acesse sua Conta</h1>
+                    <form id="loginForm" class="space-y-6 mt-8">
+                        <div><label class="text-sm font-medium text-gray-400">E-mail</label><input name="email" type="email" required class="form-input w-full p-3 mt-1 rounded-md"></div>
+                        <div><label class="text-sm font-medium text-gray-400">Senha</label><input name="password" type="password" required class="form-input w-full p-3 mt-1 rounded-md"></div>
+                        <button type="submit" class="btn w-full font-semibold py-3 rounded-md">Entrar</button>
+                    </form>
+                    <div class="text-center mt-6"><a href="#" id="showRegister" class="text-sm text-sky-400 hover:text-sky-300">Não tem uma conta? Cadastre-se</a></div>
+                </div>`;
+            },
+            registerForm() {
+                return `
+                <div class="card p-8 rounded-2xl shadow-2xl animate-fade-in">
+                    <h1 class="text-3xl font-bold text-center text-white">Crie sua Conta</h1>
+                    <form id="registerForm" class="space-y-6 mt-8">
+                        <div><label class="text-sm font-medium text-gray-400">Nome</label><input name="name" type="text" required class="form-input w-full p-3 mt-1 rounded-md"></div>
+                        <div><label class="text-sm font-medium text-gray-400">E-mail</label><input name="email" type="email" required class="form-input w-full p-3 mt-1 rounded-md"></div>
+                        <div><label class="text-sm font-medium text-gray-400">Senha</label><input name="password" type="password" required minlength="8" class="form-input w-full p-3 mt-1 rounded-md"></div>
+                        <button type="submit" class="btn w-full font-semibold py-3 rounded-md">Criar Conta</button>
+                    </form>
+                    <div class="text-center mt-6"><a href="#" id="showLogin" class="text-sm text-sky-400 hover:text-sky-300">Já tem uma conta? Faça Login</a></div>
+                </div>`;
+            },
             layout() {
                 return `
                 <div class="flex h-screen">
@@ -74,6 +98,7 @@
                             <div data-target="pressels" class="nav-link p-3 rounded-lg flex items-center">Criador de Pressel</div>
                             <div data-target="pixels" class="nav-link p-3 rounded-lg flex items-center">Gerenciar Pixels</div>
                             <div data-target="bots" class="nav-link p-3 rounded-lg flex items-center">Gerenciar Bots</div>
+                             <div data-target="settings" class="nav-link p-3 rounded-lg flex items-center">API PIX</div>
                         </nav>
                         <div class="mt-auto"><button id="logoutButton" class="w-full bg-gray-700 hover:bg-red-600/50 text-white font-semibold py-2 px-4 rounded-md">Sair</button></div>
                     </aside>
@@ -81,12 +106,7 @@
                 </div>`;
             },
             pixels() {
-                const pixels = App.state.data.pixels || [];
-                const pixelListHTML = pixels.length > 0 ? pixels.map(p => `
-                    <div class="p-2 bg-gray-800 rounded flex justify-between items-center">
-                        <span class="text-sm">${p.account_name}</span>
-                    </div>`).join('') : '<p class="text-gray-500 text-sm">Nenhum pixel salvo.</p>';
-
+                const pixelListHTML = App.state.data.pixels.map(p => `<div class="text-sm p-2 bg-gray-800 rounded">${p.account_name}</div>`).join('');
                 return `
                 <div>
                     <h1 class="text-3xl font-bold text-white mb-6">Gerenciar Pixels</h1>
@@ -102,17 +122,13 @@
                         </div>
                         <div class="card p-6 rounded-lg">
                             <h2 class="text-xl font-semibold text-white mb-4">Pixels Salvos</h2>
-                            <div id="pixel-list" class="space-y-2">${pixelListHTML}</div>
+                            <div id="pixel-list" class="space-y-2">${pixelListHTML.length ? pixelListHTML : '<p class="text-gray-500 text-sm">Nenhum pixel salvo.</p>'}</div>
                         </div>
                     </div>
                 </div>`;
             },
             bots() {
-                const bots = App.state.data.bots || [];
-                const botListHTML = bots.length > 0 ? bots.map(b => `
-                    <div class="p-2 bg-gray-800 rounded flex justify-between items-center">
-                        <span class="text-sm">${b.bot_name}</span>
-                    </div>`).join('') : '<p class="text-gray-500 text-sm">Nenhum bot salvo.</p>';
+                 const botListHTML = App.state.data.bots.map(b => `<div class="text-sm p-2 bg-gray-800 rounded">${b.bot_name}</div>`).join('');
                 return `
                 <div>
                     <h1 class="text-3xl font-bold text-white mb-6">Gerenciar Bots</h1>
@@ -127,7 +143,7 @@
                         </div>
                         <div class="card p-6 rounded-lg">
                             <h2 class="text-xl font-semibold text-white mb-4">Bots Salvos</h2>
-                            <div id="bot-list" class="space-y-2">${botListHTML}</div>
+                            <div id="bot-list" class="space-y-2">${botListHTML.length ? botListHTML : '<p class="text-gray-500 text-sm">Nenhum bot salvo.</p>'}</div>
                         </div>
                     </div>
                 </div>`;
@@ -138,13 +154,9 @@
                 const pixelCheckboxes = pixels.map(p => `<label class="flex items-center space-x-2"><input type="checkbox" name="pixel_ids" value="${p.id}"><span>${p.account_name}</span></label>`).join('');
                 const presselList = pressels.map(pr => `
                     <div class="card p-3 flex justify-between items-center text-sm">
-                        <div>
-                            <p class="font-semibold">${pr.name}</p>
-                            <p class="text-xs text-gray-400">Bot: ${pr.bot_name}</p>
-                        </div>
+                        <div><p class="font-semibold">${pr.name}</p><p class="text-xs text-gray-400">Bot: ${pr.bot_name}</p></div>
                         <button data-id="${pr.id}" class="generate-code-btn btn text-xs py-1 px-2">Ver Código</button>
                     </div>`).join('');
-
                 return `
                 <div>
                     <h1 class="text-3xl font-bold text-white mb-6">Criador de Pressel</h1>
@@ -155,7 +167,7 @@
                                 <input name="name" placeholder="Nome da Pressel (Ex: Campanha Black Friday)" class="form-input w-full p-2 rounded" required>
                                 <input name="white_page_url" type="url" placeholder="URL da Página Branca (Fallback)" class="form-input w-full p-2 rounded" required>
                                 <select name="bot_id" class="form-input w-full p-2 rounded" required><option value="">Selecione um Bot</option>${botOptions}</select>
-                                <div class="card p-3"><p class="font-semibold mb-2">Selecione os Pixels:</p><div class="space-y-2">${pixelCheckboxes}</div></div>
+                                <div class="card p-3"><p class="font-semibold mb-2">Selecione os Pixels:</p><div class="space-y-2">${pixelCheckboxes.length ? pixelCheckboxes : '<p class="text-gray-500 text-sm">Cadastre um pixel primeiro.</p>'}</div></div>
                                 <button type="submit" class="btn w-full p-3 rounded text-base font-bold">Salvar e Gerar Código</button>
                             </form>
                         </div>
@@ -166,10 +178,24 @@
                     </div>
                 </div>`;
             },
+            settings() {
+                 return `
+                <div>
+                    <h1 class="text-3xl font-bold text-white mb-6">Configuração da API PIX</h1>
+                    <div class="card p-6 rounded-lg max-w-lg">
+                        <h2 class="text-xl font-semibold mb-4 text-white">PushinPay</h2>
+                        <p class="text-sm text-gray-400 mb-4">Cole aqui o seu token de acesso (Bearer Token) da PushinPay para o seu bot poder gerar cobranças PIX.</p>
+                        <form id="pushinpayForm" class="space-y-4">
+                            <input name="token" value="${App.state.data.settings.pushinpay_token || ''}" placeholder="Cole seu token aqui" class="form-input w-full p-2 rounded">
+                            <button type="submit" class="btn w-full p-2 rounded">Salvar Token</button>
+                        </form>
+                    </div>
+                </div>`;
+            },
             modal(title, content) {
                 return `
                 <div id="modal" class="modal active">
-                    <div class="card p-6 rounded-lg w-full max-w-2xl animate-fade-in-up">
+                    <div class="card p-6 rounded-lg w-full max-w-2xl">
                         <h2 class="text-xl font-bold mb-4">${title}</h2>
                         ${content}
                         <button id="closeModalBtn" class="btn mt-4 w-full p-2 rounded">Fechar</button>
@@ -197,6 +223,7 @@
             const appContainer = document.getElementById('app');
             appContainer.addEventListener('click', (e) => {
                 if (e.target.id === 'logoutButton') this.logout();
+                if (e.target.id === 'closeModalBtn') document.getElementById('modal-container').innerHTML = '';
                 
                 const sidebarLink = e.target.closest('.nav-link');
                 if (sidebarLink) this.navigateTo(sidebarLink.dataset.target);
@@ -206,15 +233,12 @@
                     const pressel = this.state.data.pressels.find(p => p.id == presselId);
                     if (pressel) this.generatePresselCode(pressel);
                 }
-                
-                if (e.target.id === 'closeModalBtn') document.getElementById('modal-container').innerHTML = '';
             });
 
             appContainer.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const form = e.target;
                 const data = Object.fromEntries(new FormData(form).entries());
-
                 try {
                     if (form.id === 'pixelForm') {
                         const newPixel = await this.apiRequest('/api/pixels', 'POST', data);
@@ -229,16 +253,18 @@
                     if (form.id === 'presselForm') {
                         const pixel_ids = Array.from(form.querySelectorAll('input[name="pixel_ids"]:checked')).map(cb => cb.value);
                         if (pixel_ids.length === 0) return alert('Selecione ao menos um pixel.');
-                        
                         const payload = { ...data, pixel_ids };
                         const newPressel = await this.apiRequest('/api/pressels', 'POST', payload);
                         this.state.data.pressels.unshift(newPressel);
-                        this.generatePresselCode(newPressel);
                         this.navigateTo('pressels');
+                        this.generatePresselCode(newPressel);
                     }
-                } catch(e) {
-                    // O apiRequest já mostra o alert de erro
-                }
+                    if (form.id === 'pushinpayForm') {
+                        await this.apiRequest('/api/settings/pushinpay', 'POST', { token: data.token });
+                        alert('Token salvo com sucesso!');
+                        this.state.data.settings.pushinpay_token = data.token;
+                    }
+                } catch(e) {}
             });
         },
 
@@ -297,9 +323,8 @@
         generatePresselCode(pressel) {
             const { settings, pixels } = this.state.data;
             const sellerApiKey = settings.api_key;
-            if (!sellerApiKey) {
-                return alert("Erro: API Key do vendedor não encontrada.");
-            }
+            if (!sellerApiKey) return alert("Erro: API Key do vendedor não encontrada.");
+            
             const selectedPixels = pixels.filter(p => pressel.pixel_ids.includes(p.id.toString()));
             const pixelsToTrackString = JSON.stringify(selectedPixels.map(p => ({ id: p.pixel_id })), null, 2);
             const noscriptPixelsString = selectedPixels.map(p => `<img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=${p.pixel_id}&ev=PageView&noscript=1"/>`).join('\\n    ');
@@ -318,16 +343,25 @@
         const WHITE_PAGE_URL = '${pressel.white_page_url}';
         const PIXELS_TO_TRACK = ${pixelsToTrackString};
         
-        const isBot = () => /bot|facebook|crawler|spider/i.test(navigator.userAgent);
+        const isBot = () => /bot|facebook|crawler|spider|preview/i.test(navigator.userAgent);
         const isMobile = () => /android|iphone|ipad|ipod/i.test(navigator.userAgent);
         
         async function handleRedirect() {
             if (isBot() || !isMobile()) { window.location.replace(WHITE_PAGE_URL); return; }
             try {
+                const urlParams = new URLSearchParams(window.location.search);
                 const response = await fetch(\`\${API_BASE_URL}/api/registerClick\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sellerApiKey: SELLER_API_KEY, presselId: PRESSEL_ID })
+                    body: JSON.stringify({
+                        sellerApiKey: SELLER_API_KEY,
+                        presselId: PRESSEL_ID,
+                        referer: document.referrer || null,
+                        fbclid: urlParams.get('fbclid') || null,
+                        fbp: document.cookie.match(/_fbp=([^;]+)/)?.[1] || null,
+                        fbc: document.cookie.match(/_fbc=([^;]+)/)?.[1] || null,
+                        user_agent: navigator.userAgent
+                    })
                 });
                 const data = await response.json();
                 if (response.ok && data.status === 'success') {
@@ -348,36 +382,9 @@
 </html>`;
             
             const modalContainer = document.getElementById('modal-container');
-            const modalContent = `<textarea readonly class="form-input w-full h-64 text-xs bg-gray-900">${code.trim()}</textarea>`;
+            const modalContent = `<textarea readonly class="form-input w-full h-64 text-xs bg-gray-900">${code.trim().replace(/</g, "&lt;").replace(/>/g, "&gt;")}</textarea>`;
             modalContainer.innerHTML = this.templates.modal('Código da Pressel Gerado', modalContent);
         }
-    };
-
-    // Preenchendo os templates que faltavam
-    App.templates.loginForm = function() {
-        return `
-        <div class="card p-8 rounded-2xl shadow-2xl">
-            <h1 class="text-3xl font-bold text-center text-white">Acesse sua Conta</h1>
-            <form id="loginForm" class="space-y-6 mt-8">
-                <div><label class="text-sm font-medium text-gray-400">E-mail</label><input name="email" type="email" required class="form-input w-full p-3 mt-1 rounded-md"></div>
-                <div><label class="text-sm font-medium text-gray-400">Senha</label><input name="password" type="password" required class="form-input w-full p-3 mt-1 rounded-md"></div>
-                <button type="submit" class="btn w-full font-semibold py-3 rounded-md">Entrar</button>
-            </form>
-            <div class="text-center mt-6"><a href="#" id="showRegister" class="text-sm text-sky-400 hover:text-sky-300">Não tem uma conta? Cadastre-se</a></div>
-        </div>`;
-    };
-    App.templates.registerForm = function() {
-        return `
-        <div class="card p-8 rounded-2xl shadow-2xl">
-            <h1 class="text-3xl font-bold text-center text-white">Crie sua Conta</h1>
-            <form id="registerForm" class="space-y-6 mt-8">
-                <div><label class="text-sm font-medium text-gray-400">Nome</label><input name="name" type="text" required class="form-input w-full p-3 mt-1 rounded-md"></div>
-                <div><label class="text-sm font-medium text-gray-400">E-mail</label><input name="email" type="email" required class="form-input w-full p-3 mt-1 rounded-md"></div>
-                <div><label class="text-sm font-medium text-gray-400">Senha</label><input name="password" type="password" required minlength="8" class="form-input w-full p-3 mt-1 rounded-md"></div>
-                <button type="submit" class="btn w-full font-semibold py-3 rounded-md">Criar Conta</button>
-            </form>
-            <div class="text-center mt-6"><a href="#" id="showLogin" class="text-sm text-sky-400 hover:text-sky-300">Já tem uma conta? Faça Login</a></div>
-        </div>`;
     };
 
     App.init();
