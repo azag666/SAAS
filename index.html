@@ -1,374 +1,16 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HotTrack SAAS</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #111827; color: #f3f4f6; }
-        .card { background-color: #1f2937; border: 1px solid #374151; }
-        .form-input { background-color: #374151; border: 1px solid #4b5563; color: #f3f4f6; }
-        .btn { background-color: #3b82f6; color: white; transition: background-color 0.2s; border-radius: 0.375rem; padding: 0.5rem 1rem; cursor: pointer; }
-        .btn:hover { background-color: #2563eb; }
-        .btn-red { background-color: #ef4444; }
-        .btn-red:hover { background-color: #dc2626; }
-        .nav-link { color: #d1d5db; border-left: 3px solid transparent; cursor: pointer; }
-        .nav-link:hover { background-color: #374151; border-left-color: #3b82f6; }
-        .nav-link.active { background-color: rgba(59, 130, 246, 0.2); border-left-color: #3b82f6; color: white; font-weight: 600; }
-        .modal { display: none; }
-        .modal.active { display: flex; align-items: center; justify-content: center; position: fixed; z-index: 50; inset: 0; background-color: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-    </style>
-</head>
-<body>
-    <div id="app"></div>
-    <div id="modal-container"></div>
-
-    <script>
-    const App = {
-        state: {
-            API_BASE_URL: 'https://hottrack.vercel.app',
-            token: null,
-            data: { pixels: [], bots: [], pressels: [], settings: {} },
-            currentPage: 'pressels'
-        },
-
-        async init() {
-            this.state.token = localStorage.getItem('hottrack_token');
-            const appContainer = document.getElementById('app');
-            appContainer.innerHTML = `<p class="text-center p-8">Carregando...</p>`;
-            if (this.state.token) {
-                try {
-                    this.state.data = await this.apiRequest('/api/dashboard/data');
-                    this.renderLayout();
-                } catch (e) { this.logout(); }
-            } else {
-                this.renderLogin();
-            }
-        },
-
-        renderLogin(page = 'login') {
-            document.getElementById('app').innerHTML = this.templates.auth(page);
-            this.addAuthEventListeners();
-        },
-
-        renderLayout() {
-            document.getElementById('app').innerHTML = this.templates.layout();
-            this.navigateTo(this.state.currentPage);
-            this.addDashboardEventListeners();
-        },
-        
-        templates: {
-            auth(page = 'login') {
-                return `<div class="flex items-center justify-center min-h-screen p-4"><div id="auth-forms-container" class="w-full max-w-md">${page === 'login' ? this.loginForm() : this.registerForm()}</div></div>`;
-            },
-            loginForm() {
-                return `
-                <div class="card p-8 rounded-2xl shadow-2xl animate-fade-in">
-                    <h1 class="text-3xl font-bold text-center text-white">Acesse sua Conta</h1>
-                    <form id="loginForm" class="space-y-6 mt-8">
-                        <div><label class="text-sm font-medium text-gray-400">E-mail</label><input name="email" type="email" required class="form-input w-full p-3 mt-1 rounded-md"></div>
-                        <div><label class="text-sm font-medium text-gray-400">Senha</label><input name="password" type="password" required class="form-input w-full p-3 mt-1 rounded-md"></div>
-                        <button type="submit" class="btn w-full font-semibold py-3 rounded-md">Entrar</button>
-                    </form>
-                    <div class="text-center mt-6"><a href="#" id="showRegister" class="text-sm text-sky-400 hover:text-sky-300">Não tem uma conta? Cadastre-se</a></div>
-                </div>`;
-            },
-            registerForm() {
-                return `
-                <div class="card p-8 rounded-2xl shadow-2xl animate-fade-in">
-                    <h1 class="text-3xl font-bold text-center text-white">Crie sua Conta</h1>
-                    <form id="registerForm" class="space-y-6 mt-8">
-                        <div><label class="text-sm font-medium text-gray-400">Nome</label><input name="name" type="text" required class="form-input w-full p-3 mt-1 rounded-md"></div>
-                        <div><label class="text-sm font-medium text-gray-400">E-mail</label><input name="email" type="email" required class="form-input w-full p-3 mt-1 rounded-md"></div>
-                        <div><label class="text-sm font-medium text-gray-400">Senha</label><input name="password" type="password" required minlength="8" class="form-input w-full p-3 mt-1 rounded-md"></div>
-                        <button type="submit" class="btn w-full font-semibold py-3 rounded-md">Criar Conta</button>
-                    </form>
-                    <div class="text-center mt-6"><a href="#" id="showLogin" class="text-sm text-sky-400 hover:text-sky-300">Já tem uma conta? Faça Login</a></div>
-                </div>`;
-            },
-            layout() {
-                return `
-                <div class="flex h-screen">
-                    <aside class="w-64 card p-4 flex flex-col">
-                        <div class="text-center mb-10"><h1 class="text-2xl font-bold text-white">HotTrack</h1></div>
-                        <nav id="sidebarNav" class="flex flex-col space-y-2">
-                            <div data-target="pressels" class="nav-link p-3 rounded-lg flex items-center">Criador de Pressel</div>
-                            <div data-target="pixels" class="nav-link p-3 rounded-lg flex items-center">Gerenciar Pixels</div>
-                            <div data-target="bots" class="nav-link p-3 rounded-lg flex items-center">Gerenciar Bots</div>
-                            <div data-target="settings" class="nav-link p-3 rounded-lg flex items-center">API PIX</div>
-                        </nav>
-                        <div class="mt-auto"><button id="logoutButton" class="w-full bg-gray-700 hover:bg-red-600/50 text-white font-semibold py-2 px-4 rounded-md">Sair</button></div>
-                    </aside>
-                    <main id="content" class="flex-1 p-8 overflow-y-auto"></main>
-                </div>`;
-            },
-            pixels() {
-                const pixelListHTML = App.state.data.pixels.map(p => `<div class="p-2 bg-gray-800 rounded flex justify-between items-center"><span class="text-sm">${p.account_name}</span><button data-id="${p.id}" class="delete-pixel-btn btn btn-red text-xs py-1 px-2">Excluir</button></div>`).join('');
-                return `
-                <div class="animate-fade-in">
-                    <h1 class="text-3xl font-bold text-white mb-6">Gerenciar Pixels</h1>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div class="card p-6 rounded-lg">
-                            <h2 class="text-xl font-semibold mb-4 text-white">Adicionar Pixel</h2>
-                            <form id="pixelForm" class="space-y-3">
-                                <input name="account_name" placeholder="Nome do Pixel (Ex: Produto Y)" class="form-input w-full p-2 rounded" required>
-                                <input name="pixel_id" placeholder="ID do Pixel da Meta" class="form-input w-full p-2 rounded" required>
-                                <textarea name="meta_api_token" placeholder="Token da API de Conversões" class="form-input w-full p-2 rounded" rows="2" required></textarea>
-                                <button type="submit" class="btn w-full p-2 rounded">Adicionar Pixel</button>
-                            </form>
-                        </div>
-                        <div class="card p-6 rounded-lg">
-                            <h2 class="text-xl font-semibold text-white mb-4">Pixels Salvos</h2>
-                            <div id="pixel-list" class="space-y-2">${pixelListHTML.length ? pixelListHTML : '<p class="text-gray-500 text-sm">Nenhum pixel salvo.</p>'}</div>
-                        </div>
-                    </div>
-                </div>`;
-            },
-            bots() {
-                const botListHTML = App.state.data.bots.map(b => `<div class="p-2 bg-gray-800 rounded flex justify-between items-center"><span class="text-sm">${b.bot_name}</span><button data-id="${b.id}" class="delete-bot-btn btn btn-red text-xs py-1 px-2">Excluir</button></div>`).join('');
-                return `
-                <div class="animate-fade-in">
-                    <h1 class="text-3xl font-bold text-white mb-6">Gerenciar Bots</h1>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div class="card p-6 rounded-lg">
-                            <h2 class="text-xl font-semibold mb-4 text-white">Adicionar Bot</h2>
-                            <form id="botForm" class="space-y-3">
-                                <input name="bot_name" placeholder="Username do Bot (sem @)" class="form-input w-full p-2 rounded" required>
-                                <input name="bot_token" placeholder="Token do Bot (do BotFather)" class="form-input w-full p-2 rounded" required>
-                                <button type="submit" class="btn w-full p-2 rounded">Adicionar Bot</button>
-                            </form>
-                        </div>
-                        <div class="card p-6 rounded-lg">
-                            <h2 class="text-xl font-semibold text-white mb-4">Bots Salvos</h2>
-                            <div id="bot-list" class="space-y-2">${botListHTML.length ? botListHTML : '<p class="text-gray-500 text-sm">Nenhum bot salvo.</p>'}</div>
-                        </div>
-                    </div>
-                </div>`;
-            },
-            pressels() {
-                const { pixels, bots, pressels } = App.state.data;
-                const botOptions = bots.map(b => `<option value="${b.id}">${b.bot_name}</option>`).join('');
-                const pixelCheckboxes = pixels.map(p => `<label class="flex items-center space-x-2"><input type="checkbox" name="pixel_ids" value="${p.id}"><span>${p.account_name}</span></label>`).join('');
-                const presselList = pressels.map(pr => `
-                    <div class="card p-3 flex justify-between items-center text-sm">
-                        <div><p class="font-semibold">${pr.name}</p><p class="text-xs text-gray-400">Bot: ${pr.bot_name}</p></div>
-                        <div class="space-x-2">
-                           <button data-id="${pr.id}" class="generate-code-btn btn text-xs py-1 px-2">Ver Código</button>
-                           <button data-id="${pr.id}" class="delete-pressel-btn btn btn-red text-xs py-1 px-2">Excluir</button>
-                        </div>
-                    </div>`).join('');
-                return `
-                <div class="animate-fade-in">
-                    <h1 class="text-3xl font-bold text-white mb-6">Criador de Pressel</h1>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div class="card p-6 rounded-lg">
-                            <h2 class="text-xl font-bold mb-4">Criar Nova Pressel</h2>
-                            <form id="presselForm" class="space-y-4">
-                                <input name="name" placeholder="Nome da Pressel (Ex: Campanha Black Friday)" class="form-input w-full p-2 rounded" required>
-                                <input name="white_page_url" type="url" placeholder="URL da Página Branca (Fallback)" class="form-input w-full p-2 rounded" required>
-                                <select name="bot_id" class="form-input w-full p-2 rounded" required><option value="">Selecione um Bot</option>${botOptions}</select>
-                                <div class="card p-3"><p class="font-semibold mb-2">Selecione os Pixels:</p><div class="space-y-2">${pixelCheckboxes.length ? pixelCheckboxes : '<p class="text-gray-500 text-sm">Cadastre um pixel primeiro.</p>'}</div></div>
-                                <button type="submit" class="btn w-full p-3 rounded text-base font-bold">Salvar e Gerar Código</button>
-                            </form>
-                        </div>
-                        <div class="card p-6 rounded-lg">
-                            <h2 class="text-xl font-bold mb-4">Pressels Criadas</h2>
-                            <div id="pressel-list" class="space-y-3">${presselList.length ? presselList : '<p class="text-gray-500 text-sm">Nenhuma pressel criada.</p>'}</div>
-                        </div>
-                    </div>
-                </div>`;
-            },
-            settings() {
-                 return `
-                <div class="animate-fade-in">
-                    <h1 class="text-3xl font-bold text-white mb-6">Configuração da API PIX</h1>
-                    <div class="card p-6 rounded-lg max-w-lg">
-                        <h2 class="text-xl font-semibold mb-4 text-white">PushinPay</h2>
-                        <p class="text-sm text-gray-400 mb-4">Cole aqui o seu token de acesso (Bearer Token) da PushinPay para o seu bot poder gerar cobranças PIX.</p>
-                        <form id="pushinpayForm" class="space-y-4">
-                            <input name="token" value="${App.state.data.settings.pushinpay_token || ''}" placeholder="Cole seu token aqui" class="form-input w-full p-2 rounded">
-                            <button type="submit" class="btn w-full p-2 rounded">Salvar Token</button>
-                        </form>
-                    </div>
-                </div>`;
-            },
-            modal(title, content) {
-                return `
-                <div id="modal" class="modal active">
-                    <div class="card p-6 rounded-lg w-full max-w-2xl animate-fade-in">
-                        <h2 class="text-xl font-bold mb-4">${title}</h2>
-                        ${content}
-                        <button id="closeModalBtn" class="btn mt-4 w-full p-2 rounded">Fechar</button>
-                    </div>
-                </div>`;
-            }
-        },
-
-        addAuthEventListeners() {
-            const container = document.getElementById('app');
-            container.addEventListener('click', (e) => {
-                if (e.target.id === 'showRegister') { e.preventDefault(); this.renderLogin('register'); }
-                if (e.target.id === 'showLogin') { e.preventDefault(); this.renderLogin('login'); }
-            });
-            container.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const form = e.target;
-                const data = Object.fromEntries(new FormData(form).entries());
-                if (form.id === 'loginForm') await this.login(data.email, data.password);
-                if (form.id === 'registerForm') await this.register(data.name, data.email, data.password);
-            });
-        },
-        
-        addDashboardEventListeners() {
-            const appContainer = document.getElementById('app');
-            appContainer.addEventListener('click', async (e) => {
-                if (e.target.id === 'logoutButton') this.logout();
-                if (e.target.id === 'closeModalBtn') document.getElementById('modal-container').innerHTML = '';
-                
-                const sidebarLink = e.target.closest('.nav-link');
-                if (sidebarLink) this.navigateTo(sidebarLink.dataset.target);
-
-                if (e.target.classList.contains('generate-code-btn')) {
-                    const presselId = e.target.dataset.id;
-                    const pressel = this.state.data.pressels.find(p => p.id == presselId);
-                    if (pressel) this.generatePresselCode(pressel);
-                }
-
-                if (e.target.classList.contains('delete-pixel-btn')) {
-                    const id = e.target.dataset.id;
-                    if (confirm('Tem certeza?')) {
-                        await this.apiRequest(`/api/pixels/${id}`, 'DELETE');
-                        this.state.data.pixels = this.state.data.pixels.filter(p => p.id != id);
-                        this.navigateTo('pixels');
-                    }
-                }
-                if (e.target.classList.contains('delete-bot-btn')) {
-                    const id = e.target.dataset.id;
-                    if (confirm('Tem certeza?')) {
-                        await this.apiRequest(`/api/bots/${id}`, 'DELETE');
-                        this.state.data.bots = this.state.data.bots.filter(b => b.id != id);
-                        this.navigateTo('bots');
-                    }
-                }
-                if (e.target.classList.contains('delete-pressel-btn')) {
-                    const id = e.target.dataset.id;
-                    if (confirm('Tem certeza?')) {
-                        await this.apiRequest(`/api/pressels/${id}`, 'DELETE');
-                        this.state.data.pressels = this.state.data.pressels.filter(pr => pr.id != id);
-                        this.navigateTo('pressels');
-                    }
-                }
-            });
-            appContainer.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const form = e.target;
-                const data = Object.fromEntries(new FormData(form).entries());
-                try {
-                    if (form.id === 'pixelForm') {
-                        const newPixel = await this.apiRequest('/api/pixels', 'POST', data);
-                        this.state.data.pixels.unshift(newPixel);
-                        this.navigateTo('pixels');
-                    }
-                    if (form.id === 'botForm') {
-                        const newBot = await this.apiRequest('/api/bots', 'POST', data);
-                        this.state.data.bots.unshift(newBot);
-                        this.navigateTo('bots');
-                    }
-                    if (form.id === 'presselForm') {
-                        const pixel_ids = Array.from(form.querySelectorAll('input[name="pixel_ids"]:checked')).map(cb => cb.value);
-                        if (pixel_ids.length === 0) return alert('Selecione ao menos um pixel.');
-                        const payload = { ...data, pixel_ids };
-                        const newPressel = await this.apiRequest('/api/pressels', 'POST', payload);
-                        this.state.data.pressels.unshift(newPressel);
-                        this.navigateTo('pressels');
-                        this.generatePresselCode(newPressel);
-                    }
-                    if (form.id === 'pushinpayForm') {
-                        await this.apiRequest('/api/settings/pushinpay', 'POST', { token: data.token });
-                        alert('Token salvo com sucesso!');
-                        this.state.data.settings.pushinpay_token = data.token;
-                    }
-                } catch(e) {}
-            });
-        },
-
-        async apiRequest(endpoint, method = 'GET', body = null) {
-            const headers = { 'Content-Type': 'application/json' };
-            if (this.state.token) { headers['Authorization'] = `Bearer ${this.state.token}`; }
-            const options = { method, headers };
-            if (body) { options.body = JSON.stringify(body); }
-            try {
-                const response = await fetch(`${this.state.API_BASE_URL}${endpoint}`, options);
-                if (response.status === 204) return null;
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.message || 'Erro');
-                return data;
-            } catch (error) {
-                alert(`Erro: ${error.message}`);
-                if (error.message.includes('inválido') || error.message.includes('Token')) this.logout();
-                throw error;
-            }
-        },
-        
-        async login(email, password) {
-            try {
-                const data = await this.apiRequest('/api/sellers/login', 'POST', { email, password });
-                this.state.token = data.token;
-                localStorage.setItem('hottrack_token', data.token);
-                await this.init();
-            } catch (e) {}
-        },
-        
-        async register(name, email, password) {
-            try {
-                await this.apiRequest('/api/sellers/register', 'POST', { name, email, password });
-                alert('Cadastro realizado! Faça o login.');
-                this.renderLogin('login');
-            } catch (e) {}
-        },
-
-        logout() {
-            this.state.token = null;
-            localStorage.removeItem('hottrack_token');
-            this.init();
-        },
-
-        navigateTo(page) {
-            this.state.currentPage = page;
-            const contentContainer = document.getElementById('content');
-            if (contentContainer && this.templates[page]) {
-                contentContainer.innerHTML = this.templates[page]();
-                document.querySelectorAll('.nav-link').forEach(item => {
-                    item.classList.toggle('active', item.dataset.target === page);
-                });
-            }
-        },
-
-        generatePresselCode(pressel) {
-            const { settings, pixels } = this.state.data;
-            const sellerApiKey = settings.api_key;
-            if (!sellerApiKey) return alert("Erro: API Key do vendedor não encontrada.");
-            
-            const selectedPixels = pixels.filter(p => pressel.pixel_ids.includes(p.id));
-            const pixelsToTrackString = JSON.stringify(selectedPixels.map(p => ({ id: p.pixel_id })), null, 2);
-            const noscriptPixelsString = selectedPixels.map(p => `<img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=${p.pixel_id}&ev=PageView&noscript=1"/>`).join('\\n    ');
-            
-            const code = `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${pressel.name}</title>
+    <title>vip</title>
     <script>
-        const API_BASE_URL = '${this.state.API_BASE_URL}';
-        const SELLER_API_KEY = '${sellerApiKey}';
-        const PRESSEL_ID = ${pressel.id};
-        const TELEGRAM_USERNAME = '${pressel.bot_name}';
-        const WHITE_PAGE_URL = '${pressel.white_page_url}';
-        const PIXELS_TO_TRACK = ${pixelsToTrackString};
+        const API_BASE_URL = 'https://hottrack.vercel.app';
+        const SELLER_API_KEY = 'f7bf8baf-7c87-4b52-8d7e-c6e8a3ca46c7';
+        const PRESSEL_ID = 5;
+        const TELEGRAM_USERNAME = 'gabrielabbimbot';
+        const WHITE_PAGE_URL = 'https://br.pinterest.com/';
+        const PIXELS_TO_TRACK = [];
         
         const isBot = () => /bot|facebook|crawler|spider|preview/i.test(navigator.userAgent);
         const isMobile = () => /android|iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -377,7 +19,7 @@
             if (isBot() || !isMobile()) { window.location.replace(WHITE_PAGE_URL); return; }
             try {
                 const urlParams = new URLSearchParams(window.location.search);
-                const response = await fetch(\`\${API_BASE_URL}/api/registerClick\`, {
+                const response = await fetch(`${API_BASE_URL}/api/registerClick`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -392,30 +34,18 @@
                 });
                 const data = await response.json();
                 if (response.ok && data.status === 'success') {
-                    window.location.replace(\`https://t.me/\${TELEGRAM_USERNAME}?start=\${data.click_id}\`);
+                    window.location.replace(`https://t.me/${TELEGRAM_USERNAME}?start=${data.click_id}`);
                 } else { window.location.replace(WHITE_PAGE_URL); }
             } catch (error) { window.location.replace(WHITE_PAGE_URL); }
         }
         handleRedirect();
-    <\/script>
+    </script>
     <script>
         !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src='https://connect.facebook.net/en_US/fbevents.js';s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script');
         PIXELS_TO_TRACK.forEach(p => { fbq('init', p.id); });
         fbq('track', 'PageView');
-    <\/script>
-    <noscript>${noscriptPixelsString}</noscript>
+    </script>
+    <noscript></noscript>
 </head>
 <body><p>Redirecionando...</p></body>
-</html>`;
-            
-            const modalContainer = document.getElementById('modal-container');
-            const encodedCode = code.trim().replace(/</g, "&lt;").replace(/>/g, "&gt;");
-            const modalContent = `<textarea readonly class="form-input w-full h-64 text-xs bg-gray-900">${encodedCode}</textarea>`;
-            modalContainer.innerHTML = this.templates.modal('Código da Pressel Gerado', modalContent);
-        }
-    };
-
-    App.init();
-    </script>
-</body>
 </html>
